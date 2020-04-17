@@ -14,46 +14,105 @@ error_msg()
         echo "$name: error: $1" 1>&2
 }
 
+# basic checks of input
+check()
+{
+if test $l = "y" && test $u = "y"
+then
+  error_msg "Both lowercase and uppercase options selected."
+  exit 1;
+fi
+
+if test $l = "n" && test $u = "n" && test $sedPattern = "n"
+then
+  error_msg "No l, u or sed pattern as arguments"
+  exit 1;
+fi
+
+if test -z "$1"
+then
+  error_msg "File path empty"
+  exit 1;
+fi
+
+}
+
+#save arg as sedPattern or filePath
 save_arg()
 {
+  argFilePath=$1
   if test -z "$sedPattern" && test $l = 'n' && test $u = 'n'
   then
-    sedPattern=$1
-  elif test -z "$filePath"
+    sedPattern=$argFilePath
+  elif test -d $argFilePath || test -f $argFilePath
   then
-    filePath=$1
+    filePath=$argFilePath
+    #modify the filePath passed
+    doSomethingWithFilePath $argFilePath
   else
-    error_msg "too many arguments: $1"
-    exit 1;
+    error_msg "argument not accepted: $argFilePath"
   fi
+}
+
+doSomethingWithFilePath()
+{
+  argFilePath=$1
+  check $argFilePath
+
+  # if not recursive, find only in current dir
+  if test $r = "n"
+  then
+    maxdepth="-maxdepth 0"
+  fi
+
+  #go recursively through each file and apply the modification depth first.
+  find $argFilePath -d $maxdepth | while IFS=: read foundFilePath
+  do
+    if test $l = "y"
+    then
+      lowercase $foundFilePath
+    elif test $u = "y"
+    then
+      uppercase $foundFilePath
+    elif test -n "$sedPattern" && test -n "$foundFilePath"
+    then
+      sed_modify $sedPattern $foundFilePath
+    else
+      error_msg "Skipped all ifs for $foundFilePath"
+    fi
+  done
 }
 
 lowercase()
 {
+  #replace each big letter with small letter
   toLowercaseSed="y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/"
-  # sed_modify $toLowercaseSed $1
   string="$(sed "$toLowercaseSed" <<< "$1")"
   mv $1 $string
 }
 
 uppercase()
 {
-  # sed_modify $toUppercaseSed $1
+  #replace each small letter with big letter
   toUppercaseSed="y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/"
   string="$(sed "$toUppercaseSed" <<< "$1")"
   mv $1 $string
 }
 
 sed_modify() {
+  #enter into dir and modify filename.
+  #since find results are depth first, it changes the dir name last
+
   #$1 = $sedPattern
   #$2 = $filePath
 
-  fileNameString=$(basename $2)
-  dirPath=$(dirname $2)
-  newfileNameString="$(sed "$1" <<< "$fileNameString")"
-  string="$dirPath/$newfileNameString"
+  pwdString=$(pwd)
+  cd $(dirname $2)
 
-  mv $2 $string
+  string="$(sed "$1" <<< "$(basename $2)")"
+
+  mv $(basename $2) $string
+  cd $pwdString
 }
 
 # if no arguments given
@@ -67,12 +126,13 @@ usage:
   $name [-h]
 
 $name correct syntax examples:
-  [TODO]
+  $name -l new.c new2.c new3.c
+  $name -u examplefolder
 
 $name incorrect syntax example:
   $name -l -u new.c
-  $name -l new.c new2.c new3.c
-  $name -u examplefolder
+  $name new.c
+
 
 EOT
 exit 0;
@@ -93,49 +153,11 @@ do
                 -l|--lower) l=y;;
                 -u|--upper) u=y;;
                 -h|--help) h=y;;
-                #-w) with_arg "$2"; shift;;
                 -*) error_msg "bad option $1"; exit 1 ;;
                 *) save_arg $1
         esac
         shift
 done
-
-if test $l = "y" && test $u = "y"
-then
-  error_msg "Both lowercase and uppercase options selected."
-  exit 1;
-fi
-
-if test -z "$filePath"
-then
-  error_msg "File path empty"
-  exit 1;
-fi
-
-if test -d $filePath && test $r = "n"
-then
-  error_msg "modify works only on files"
-  exit 1;
-fi
-
-if test $r = "n"
-then
-  maxdepth="-maxdepth 1"
-fi
-
-find "$filePath" -type f $maxdepth | while IFS=: read foundFilePath
-do
-  if test $l = "y"
-  then
-    lowercase $foundFilePath
-  elif test $u = "y"
-  then
-    uppercase $foundFilePath
-  elif test -n "$sedPattern" && test -n "$foundFilePath"
-  then
-    sed_modify $sedPattern $foundFilePath
-  else
-    error_msg "Skipped all ifs for $foundFilePath"
-  fi
-done
+# check again for any errors
+check $filePath
 exit 0;
