@@ -18,6 +18,12 @@
 
 #define NUM_CHILD 3
 
+#ifdef WITH_SIGNALS
+#define WITHSIGNALS 1
+#else
+#define WITHSIGNALS 0
+#endif
+
 void child(void);
 void parent(int pid);
 
@@ -34,7 +40,7 @@ int main(int argc, const char * argv[]) {
         switch (forkValue) {
             case -1:
                 // error
-                printf("Failed to create child process");
+                printf("parent[%d]: Failed to create child process", getpid());
                 // kill child process
                 for (int i = 0; i<NUM_CHILD; i++) {
                     if (childArray[i] > 0) {
@@ -54,7 +60,7 @@ int main(int argc, const char * argv[]) {
         }
     }
     if (getpid() == callerID) {
-        printf("All child process created\n");
+        printf("parent[%d]: All child process created\n", getpid());
         
     }
 //    3. Print a message about creation of all child processes.
@@ -68,8 +74,8 @@ int main(int argc, const char * argv[]) {
     }
     
     if (getpid() == callerID) {
-        printf("There are no more child process\n");
-        printf("Count exit codes: %d\n", countTerminations);
+        printf("parent[%d]: There are no more child process\n", getpid());
+        printf("parent[%d]: Count exit codes: %d\n", getpid(), countTerminations);
     }
     
     return 0;
@@ -77,8 +83,8 @@ int main(int argc, const char * argv[]) {
 
 
 void child(void) {
-    printf("Parent PID: %d\n", getppid());
+    printf("child[%d]: Parent PID: %d\n", getpid(), getppid());
     sleep(5);
-    printf("Execution completed\n");
+    printf("child[%d]: Execution completed\n", getpid());
     // exit(0)
 }
