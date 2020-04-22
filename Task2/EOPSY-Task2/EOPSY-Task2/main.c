@@ -24,6 +24,7 @@
 
 void child(void);
 void parent(int pid);
+
 void ignoreHandler(int sig);
 void terminationHandler(int sig);
 
@@ -65,23 +66,24 @@ int main(int argc, const char * argv[]) {
                 
             default:
                 childArray[i] = forkValue;
-                
-                struct sigaction new_sa;
-                struct sigaction old_sa;
-                sigfillset(&new_sa.sa_mask);
-                new_sa.sa_handler = SIG_IGN;
-                new_sa.sa_flags = 0;
+                if (WITHSIGNALS) {
+                    struct sigaction new_sa;
+                    struct sigaction old_sa;
+                    sigfillset(&new_sa.sa_mask);
+                    new_sa.sa_handler = SIG_IGN;
+                    new_sa.sa_flags = 0;
 
-                for (int j = 0; j<32; j++) {
-                    if (j != SIGCHLD) {
-                        if (sigaction(j, &new_sa, &old_sa) == 0 && old_sa.sa_handler != SIG_IGN)
-                        {
-                            new_sa.sa_handler = ignoreHandler;
-                            sigaction(SIGINT, &new_sa, 0);
+                    for (int j = 0; j<32; j++) {
+                        if (j != SIGCHLD) {
+                            if (sigaction(j, &new_sa, &old_sa) == 0 && old_sa.sa_handler != SIG_IGN)
+                            {
+                                new_sa.sa_handler = ignoreHandler;
+                                sigaction(SIGINT, &new_sa, 0);
+                            }
                         }
                     }
                 }
-                wait(NULL);
+                waitpid(forkValue, NULL, 0);
                 break;
         }
     }
@@ -104,23 +106,30 @@ int main(int argc, const char * argv[]) {
         printf("parent[%d]: Count exit codes: %d\n", getpid(), countTerminations);
     }
     
-    // restore handlers.
-    for (int i=0; i<32; i++) {
-        signal(i, SIG_DFL);
+    if (WITHSIGNALS) {
+        // restore handlers.
+        for (int i=0; i<32; i++) {
+            signal(i, SIG_DFL);
+        }
     }
+    
+    
     
     return 0;
 }
 
 
 void child(void) {
-    struct sigaction new_sa;
-    sigfillset(&new_sa.sa_mask);
-    new_sa.sa_flags = 0;
+    if (WITHSIGNALS) {
+        struct sigaction new_sa;
+        sigfillset(&new_sa.sa_mask);
+        new_sa.sa_flags = 0;
 
-    new_sa.sa_handler = terminationHandler;
-    sigaction(SIGTERM, &new_sa, NULL);
-    sigaction(SIGTERM, NULL, NULL);
+        new_sa.sa_handler = terminationHandler;
+        sigaction(SIGTERM, &new_sa, NULL);
+        sigaction(SIGTERM, NULL, NULL);
+    }
+    
     
     printf("child[%d]: Parent PID: %d\n", getpid(), getppid());
     sleep(10);
