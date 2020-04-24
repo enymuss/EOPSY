@@ -15,6 +15,7 @@
 #include "stdbool.h"
 
 #define NUM_CHILD 3
+//#define WITH_SIGNALS
 
 #ifdef WITH_SIGNALS
 #define WITHSIGNALS 1
@@ -33,11 +34,16 @@ bool keyboardInterrupt = false;
 int main(int argc, const char * argv[]) {
     
     pid_t childArray[NUM_CHILD] = {0};
-    pid_t forkValue = 0;
+    pid_t forkValue = 1;
     pid_t callerID = getpid();
+    pid_t child_pid;
     
     for (int i = 0; i<NUM_CHILD; i++) {
-        forkValue = fork();
+        
+        if ((forkValue = fork()) == 0){
+            i = NUM_CHILD;
+        }
+        
         if (keyboardInterrupt) {
             forkValue = -1;
         }
@@ -83,15 +89,15 @@ int main(int argc, const char * argv[]) {
                         }
                     }
                 }
-                waitpid(forkValue, NULL, 0);
+                //waitpid(forkValue, NULL, 0);
                 break;
         }
     }
     if (getpid() == callerID) {
         printf("parent[%d]: All child process created\n", getpid());
-        
+        waitpid(forkValue, NULL, 0);
     }
-//    3. Print a message about creation of all child processes.
+    
     pid_t terminatedChildProcess;
     int countTerminations = 0;
     for (int i=0; i<NUM_CHILD; i++) {
@@ -143,5 +149,5 @@ void ignoreHandler(int sig) {
 }
 
 void terminationHandler(int sig) {
-    printf("This process is terminated");
+    printf("This process is terminated\n");
 }
