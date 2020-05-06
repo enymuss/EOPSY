@@ -1,0 +1,12 @@
+numProcess = 2
+The simulation run time was 4000, a sum of 2 processes, each 2000 ms. The processes were blocked 3 times, at 500ms, 1000ms and 1500ms. The process was finished before it was blocked the 4th time.
+The process was running in between one another, instead of completing process 0 then process 1.
+
+numProcess = 5
+Simulation run time is also numprocess(5) * mean(2000) = maximum runtime (10000).
+The processes was also blocked 3 time, like for numprocess=2.
+In Summary-Processes, we see it runs Process 0 and 1 during each other. Then it starts process 2 and 3. Once Process 2 and 3 finish, process 4 begins.
+
+numProcess = 10
+The simulation runs for 10000ms, the upper-bound set by runtime variable, for it to complete it would take 10*2'000 = 20'000ms. We see in Summary-Results that it completes process 0-3 fully and leaves process 4 and 5 incomplete. Process 6-9 are not registered ever.
+It also completes the processes in pairs: 0,1 then 2,3 and finally 4,5. Process 4 was blocked one time more than process 5, beacuse it did not have enough time to be blocked. I think if runtime was set to 10001ms, they would be equally many times blocked.
