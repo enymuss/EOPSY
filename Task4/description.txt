@@ -1,0 +1,4 @@
+the page replacement algorithm is FIFO - First in First Out,
+the system keeps in memory the page references, and when the whole array
+is filled and a new page reference is needed, the oldest page reference
+is replaced.
