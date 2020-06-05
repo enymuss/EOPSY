@@ -23,6 +23,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C510A3AE248A38CD0084273E /* old.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = old.txt; sourceTree = "<group>"; };
 		C58AFF53248A2D0400F173B8 /* Task6 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Task6; sourceTree = BUILT_PRODUCTS_DIR; };
 		C58AFF56248A2D0400F173B8 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -58,6 +59,7 @@
 			isa = PBXGroup;
 			children = (
 				C58AFF56248A2D0400F173B8 /* main.c */,
+				C510A3AE248A38CD0084273E /* old.txt */,
 			);
 			path = Task6;
 			sourceTree = "<group>";
