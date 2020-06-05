@@ -9,10 +9,10 @@
 #include <sys/shm.h>
 #include <sys/mman.h>
 
-#define BARBERSCOUNT_M 1 // (N1)
-#define BARBERSCOUNT_F 1 // (N2)
-#define BARBERSCOUNT_MF 1 // (N3)
-#define CHAIRS 5 // (M)
+#define BARBERSCOUNT_M 2 // (N1)
+#define BARBERSCOUNT_F 2 // (N2)
+#define BARBERSCOUNT_MF 2 // (N3)
+#define CHAIRS 3 // (M)
 #define SUMBARBERS BARBERSCOUNT_M+BARBERSCOUNT_F+BARBERSCOUNT_MF
 
 // semaphore indexes
