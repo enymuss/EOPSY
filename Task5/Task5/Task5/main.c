@@ -9,21 +9,24 @@
 #include <sys/shm.h>
 #include <sys/mman.h>
 
-#define BARBERSCOUNT_M 1
-#define BARBERSCOUNT_F 1
-#define BARBERSCOUNT_MF 1
-#define CHAIRS 5
+#define BARBERSCOUNT_M 1 // (N1)
+#define BARBERSCOUNT_F 1 // (N2)
+#define BARBERSCOUNT_MF 1 // (N3)
+#define CHAIRS 5 // (M)
 #define SUMBARBERS BARBERSCOUNT_M+BARBERSCOUNT_F+BARBERSCOUNT_MF
 
+// semaphore indexes
 #define CUSTOMERS 0
 #define BARBERS_M 1
 #define BARBERS_F 2
 #define BARBERS_MF 3
 #define MUTEX 4
 
+// customer types
 #define CUSTOMER_M 1
 #define CUSTOMER_F 2
 
+// barber types
 #define BARBER_M CUSTOMER_M
 #define BARBER_F CUSTOMER_F
 #define BARBER_MF 3
@@ -33,63 +36,67 @@ int *waiting;
 int *count;
 struct sembuf semaphore;
 
-int popFirstItem (int* intArray, int length);
-int addCustomerToQueue (int* intArray, int length, int customerType);
-int indexOfFirstEmptyChair (int* intArray, int length);
+// fifo function helpers on waiting queue
 void printQueue(int* intArray, int length);
-int indexOfFirstCustomerType(int* intArray, int length, int customerType);
+int popFirstItem (int* intArray, int length);
 int popItemAtIndex (int* intArray, int length, int index);
+int indexOfFirstEmptyChair (int* intArray, int length);
+int indexOfFirstCustomerType(int* intArray, int length, int customerType);
+int addCustomerToQueue (int* intArray, int length, int customerType);
 
+// semaphore operations
 void up(int sem_id,int sem_num,struct sembuf *semaphore) {
-    semaphore->sem_num=sem_num;
-    semaphore->sem_op=1;
-    semaphore->sem_flg=0;
-    semop(sem_id,semaphore,1);
+    semaphore->sem_num = sem_num;
+    semaphore->sem_op = 1;
+    semaphore->sem_flg = 0;
+    semop(sem_id, semaphore, 1);
 }
 
 void down(int sem_id,int sem_num,struct sembuf *semaphore) {
-    semaphore->sem_num=sem_num;
-    semaphore->sem_op=-1;
-    semaphore->sem_flg=0;
-    semop(sem_id,semaphore,1);
+    semaphore->sem_num = sem_num;
+    semaphore->sem_op = -1;
+    semaphore->sem_flg = 0;
+    semop(sem_id, semaphore, 1);
 }
 
+// create semaphore with value
 void initSem(int sem_id,int sem_num,int val) {
-    
     union semnum {
         int val;
         struct semid_ds *buf;
         unsigned short *array;
         
     } argument;
-    argument.val=val;
+    argument.val = val;
     
-    semctl(sem_id,sem_num,SETVAL,argument);
-    
+    semctl(sem_id, sem_num, SETVAL, argument);
 }
 
 int main() {
-    
-    //    shm_id=shmget(shm_key,sizeof(int),IPC_CREAT|0666);
+    // create a set of 5 semaphores
     sem_id = semget(IPC_PRIVATE, 5, IPC_CREAT | 0666);
+    // create queue and customer count which can be shared between processes
     waiting = mmap(NULL, sizeof(int)*CHAIRS, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANON, -1, 0);
     count = mmap(NULL, sizeof *count, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANON, -1, 0);
     
+    // at the start, queue is empty and there where no customers
     *waiting = 0;
     *count = 0;
     
+    // set semaphore and their initial value
     initSem(sem_id, CUSTOMERS, 0);
     initSem(sem_id, BARBERS_M, BARBERSCOUNT_M);
     initSem(sem_id, BARBERS_F, BARBERSCOUNT_F);
     initSem(sem_id, BARBERS_MF, BARBERSCOUNT_MF);
+    // mutual exclusion set to 1
     initSem(sem_id, MUTEX, 1);
     
-    printf("There are %d chairs.\n",CHAIRS);
+    printf("There are %d chairs.\n", CHAIRS);
     
     int pid = 0;
     int barberType = 0;
     int semaphoreIndex = 0;
-    
+    // create barbers and set the types of customers they serve
     for (int i = 0; i<(SUMBARBERS); i++) {
         pid = fork ();
         if (pid != 0) {
@@ -125,6 +132,7 @@ int main() {
         }
         if (barberType == BARBER_MF) {
             while(1) {
+                // BARBER_MF can serve any customer, so take the first one
                 down(sem_id, CUSTOMERS, &semaphore);
                 down(sem_id, MUTEX, &semaphore);
                 int customerType = popFirstItem(waiting, CHAIRS);
@@ -137,6 +145,7 @@ int main() {
             while(1) {
                 down(sem_id, CUSTOMERS, &semaphore);
                 down(sem_id, MUTEX, &semaphore);
+                // check if the queue has customers the barber can serve
                 int index = indexOfFirstCustomerType(waiting, CHAIRS, barberType);
                 if (index >= 0) {
                     int customerType = popItemAtIndex(waiting, CHAIRS, index);
@@ -156,8 +165,10 @@ int main() {
         while(1) {
             sleep(1);
             down(sem_id, MUTEX, &semaphore);
+            // check if there are empty chairs
             int index = indexOfFirstEmptyChair(waiting, CHAIRS);
             if(index != -1) {
+                // add random customer
                 *count = *count + 1;
                 printf("Customer %d is seated.\n", *count);
                 //                *waiting = *waiting + 1;
@@ -182,6 +193,8 @@ int popFirstItem (int* intArray, int length) {
 }
 
 int popItemAtIndex (int* intArray, int length, int index) {
+    // remove item at index and move all items after it 1 position forward
+    // set the end to empty
     int itemValue = intArray[index];
     
     for (int i = index; i < length-1; i++) {
