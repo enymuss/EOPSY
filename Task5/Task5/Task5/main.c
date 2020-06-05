@@ -28,12 +28,16 @@ int *waiting;
 int *count;
 struct sembuf semaphore;
 
+int popFirstItem (int* intArray, int length);
+int addCustomerToQueue (int* intArray, int length, int customerType);
+int indexOfFirstEmptyChair (int* intArray, int length);
+void printQueue(int* intArray, int length);
+
 void up(int sem_id,int sem_num,struct sembuf *semaphore) {
     semaphore->sem_num=sem_num;
     semaphore->sem_op=1;
     semaphore->sem_flg=0;
     semop(sem_id,semaphore,1);
-    
 }
 
 void down(int sem_id,int sem_num,struct sembuf *semaphore) {
@@ -61,7 +65,7 @@ int main() {
     
     //    shm_id=shmget(shm_key,sizeof(int),IPC_CREAT|0666);
     sem_id = semget(IPC_PRIVATE, 5, IPC_CREAT | 0666);
-    waiting = mmap(NULL, sizeof *waiting, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANON, -1, 0);
+    waiting = mmap(NULL, sizeof(int)*CHAIRS, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANON, -1, 0);
     count = mmap(NULL, sizeof *count, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANON, -1, 0);
     
     *waiting = 0;
@@ -76,7 +80,8 @@ int main() {
     printf("There are %d chairs.\n",CHAIRS);
     
     int pid = 0;
-    for (int i = 0; i<3; i++) {
+    
+    for (int i = 0; i<1; i++) {
         pid = fork ();
         if (pid != 0) {
             break;
@@ -88,7 +93,9 @@ int main() {
         while(1) {
             down(sem_id, CUSTOMERS, &semaphore);
             down(sem_id, MUTEX, &semaphore);
-            *waiting = *waiting - 1;
+//            *waiting = *waiting - 1;
+            int customerType = popFirstItem(waiting, CHAIRS);
+            printf("customerType: %d\n", customerType);
             up(sem_id, BARBERS_M, &semaphore);
             up(sem_id, MUTEX, &semaphore);
             printf("The barber %d is now cutting hair.\n", pid);
@@ -100,10 +107,13 @@ int main() {
         while(1) {
             sleep(1);
             down(sem_id, MUTEX, &semaphore);
-            if(*waiting < CHAIRS) {
+            int index = indexOfFirstEmptyChair(waiting, CHAIRS);
+            if(index < CHAIRS) {
                 *count = *count + 1;
                 printf("Customer %d is seated.\n", *count);
-                *waiting = *waiting + 1;
+//                *waiting = *waiting + 1;
+                addCustomerToQueue(waiting, CHAIRS, (rand()%2)+1);
+                printQueue(waiting, CHAIRS);
                 up(sem_id, CUSTOMERS, &semaphore);
                 up(sem_id, MUTEX, &semaphore);
             }
@@ -116,4 +126,41 @@ int main() {
     }
     
     
+}
+
+int popFirstItem (int* intArray, int length) {
+    int firstItemValue = intArray[0];
+    
+    for (int i = 0; i < length-1; i++) {
+        intArray[i] = intArray[i+1];
+    }
+    intArray[length-1] = 0;
+    
+    return firstItemValue;
+}
+
+int indexOfFirstEmptyChair (int* intArray, int length) {
+    for (int i = 0; i < length; i++) {
+        if (intArray[i] == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+int addCustomerToQueue (int* intArray, int length, int customerType) {
+    int insertIndex = indexOfFirstEmptyChair(intArray, length);
+    if (insertIndex >= 0) {
+        intArray[insertIndex] = customerType;
+        return 0;
+    }
+    else {
+        return -1;
+    }
+}
+
+void printQueue(int* intArray, int length){
+    for (int i = 0; i<length; i++) {
+        printf("array[%d]: %d\n", i, intArray[i]);
+    }
+    printf("\n");
 }
