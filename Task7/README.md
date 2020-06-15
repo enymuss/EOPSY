@@ -1,5 +1,5 @@
 Questions:
-1. No, my task5 was different <3.
+1. adding a mutex would not work, because 2 mutexes cannot be locked at the same time.
 
 2. m is initialized with 1 so the first philosopher can check the chopsticks.
 s is initialized with 0, so the test can unlock it.
